@@ -189,6 +189,7 @@
         <div class="hud">
           <div class="pill"><span>Score</span><b id="score">0</b></div>
           <div class="pill"><span>Best</span><b id="best">0</b></div>
+          <div class="pill"><span>Level</span><b id="level">1</b></div>
         </div>
       </div>
 
@@ -200,7 +201,7 @@
         <div class="panel">
           <h1 id="panelTitle">KAX Space Hop</h1>
           <p id="panelText">
-            Easy at the start, then gradually harder. Keep your <b>planet</b> safe through <b>asteroid belt gaps</b>.
+            Easy at the start, then harder in steps. Guide your <b>planet</b> through <b>asteroid belt gaps</b>.
           </p>
 
           <div class="grid">
@@ -219,7 +220,7 @@
               <input type="checkbox" id="soundToggle" checked />
               <label for="soundToggle">Sound</label>
             </div>
-            <div style="opacity:.9">v1.3 (progressive difficulty)</div>
+            <div style="opacity:.9">v1.4 (bigger planet + step difficulty)</div>
           </div>
         </div>
       </div>
@@ -242,6 +243,7 @@
 
   const scoreEl = document.getElementById('score');
   const bestEl  = document.getElementById('best');
+  const levelEl = document.getElementById('level');
 
   const overlay     = document.getElementById('overlay');
   const panelTitle  = document.getElementById('panelTitle');
@@ -298,8 +300,6 @@
   const player = {
     x:0, y:0, r:18,
     vy:0,
-    boost:-8.0,
-    gravity:0.44,
     drag:0.995,
     tilt:0
   };
@@ -308,57 +308,64 @@
   const stars = [];
   const particles = [];
 
-  // -------- Progressive difficulty model --------
-  // difficultyT grows from 0 (easy) to 1 (hard) smoothly.
-  // We base it on score but you can switch to elapsed time if you prefer.
-  function difficultyT(){
-    // 0 at score 0, ~0.5 around 25, ~0.8 around 50, capped at 1.
-    return clamp(state.score / 60, 0, 1);
+  // -------- Step-based difficulty --------
+  // Every 8 points => next level (1..)
+  function level(){
+    return 1 + Math.floor(state.score / 8);
   }
 
-  // Gap: large at first, shrinks gradually
+  // Smooth within each level (0..1), so changes aren't too sudden.
+  function levelProgress(){
+    return (state.score % 8) / 8;
+  }
+
+  // We mix step (level) + a tiny smooth progression inside the step.
+  function difficulty01(){
+    // level 1 => ~0.0 ... level 10 => ~1.0
+    const lv = level();
+    const base = clamp((lv - 1) / 10, 0, 1);
+    const intra = levelProgress() * 0.08; // small smoothness inside a step
+    return clamp(base + intra, 0, 1);
+  }
+
   function currentGap(H){
-    const t = difficultyT();
-    const easyGap = H * 0.36;   // very forgiving
-    const hardGap = H * 0.24;   // challenging but playable
+    const t = difficulty01();
+    const easyGap = H * 0.36;
+    const hardGap = H * 0.22;
     return lerp(easyGap, hardGap, t);
   }
 
-  // Spacing between belts: wide at first, slightly tighter later (but never cramped)
   function beltSpacing(W, H){
-    const t = difficultyT();
-    const easy = Math.max(W * 0.82, H * 0.48);
-    const hard = Math.max(W * 0.64, H * 0.40);
+    const t = difficulty01();
+    const easy = Math.max(W * 0.86, H * 0.50);
+    const hard = Math.max(W * 0.62, H * 0.40);
     return lerp(easy, hard, t);
   }
 
-  // Speed: slow at first, faster later (smoothly)
   function beltSpeed(W){
-    const t = difficultyT();
-    const easy = Math.max(1.8, Math.min(3.0, W * 0.0033));
-    const hard = Math.max(2.6, Math.min(4.6, W * 0.0048));
+    const t = difficulty01();
+    const easy = Math.max(1.9, Math.min(3.2, W * 0.0035));
+    const hard = Math.max(3.0, Math.min(5.2, W * 0.0054));
     return lerp(easy, hard, t);
   }
 
-  // Belt width: slightly wider early, slightly slimmer later
   function beltWidth(W){
-    const t = difficultyT();
+    const t = difficulty01();
     const easy = Math.max(64, Math.min(92, Math.round(W * 0.18)));
     const hard = Math.max(54, Math.min(84, Math.round(W * 0.15)));
     return Math.round(lerp(easy, hard, t));
   }
 
-  // Player physics: a bit gentler early, slightly snappier later
   function gravity(){
-    const t = difficultyT();
-    return lerp(0.40, 0.52, t);
-  }
-  function boostImpulse(){
-    const t = difficultyT();
-    return lerp(-7.8, -8.6, t);
+    const t = difficulty01();
+    return lerp(0.40, 0.56, t);
   }
 
-  // ---------------------------------------------
+  function boostImpulse(){
+    const t = difficulty01();
+    return lerp(-8.0, -8.8, t);
+  }
+  // --------------------------------------
 
   function resetWorld(){
     const W = canvas.width, H = canvas.height;
@@ -367,12 +374,14 @@
     state.score = 0;
     state.gameOver = false;
     scoreEl.textContent = '0';
+    levelEl.textContent = '1';
 
     belts.length = 0;
     stars.length = 0;
     particles.length = 0;
 
-    player.r = Math.max(14, Math.min(26, Math.round(W * 0.040)));
+    // ✅ Bigger planet
+    player.r = Math.max(18, Math.min(30, Math.round(W * 0.052))); // was ~0.040
     player.x = W * 0.28;
     player.y = H * 0.52;
     player.vy = 0;
@@ -383,7 +392,6 @@
       stars.push({ x:Math.random()*W, y:Math.random()*H, r:rand(0.7,1.9), s:rand(0.12,0.6), a:rand(0.15,0.9) });
     }
 
-    // Seed belts using EASY spacing initially (score=0)
     let x = W * 1.18;
     const spacing = beltSpacing(W, H);
     const count = 4;
@@ -407,7 +415,6 @@
     const gap = currentGap(H);
     const center = rand(H*0.24, H*0.76);
     const thickness = Math.max(34, Math.min(64, Math.round(W*0.12)));
-
     return {
       x,
       w: beltWidth(W),
@@ -631,7 +638,7 @@
       `• <b>Tap/Click</b> or press <b>Space</b> to boost your planet upward.<br/>` +
       `• Slip through the <b>asteroid belt gaps</b>.<br/>` +
       `• Each belt passed = <b>+1</b> score.<br/><br/>` +
-      `Difficulty increases gradually: gaps get smaller, belts come faster.`;
+      `Difficulty increases in steps: every 8 points you level up.`;
   }
 
   // Input
@@ -659,12 +666,12 @@
     state.time += dt;
     const W = canvas.width, H = canvas.height;
 
-    // Physics with progressive difficulty
+    // Physics (progressive)
     player.vy += gravity() * (dt/16.67);
     player.vy *= player.drag;
     player.y += player.vy * (dt/16.67);
 
-    // Move belts with progressive speed
+    // Move belts (progressive speed)
     const speed = beltSpeed(W);
     for (const b of belts){
       b.x -= speed * (dt/16.67);
@@ -673,17 +680,25 @@
         b.scored = true;
         state.score += 1;
         scoreEl.textContent = state.score;
-        beep(520 + Math.min(300, state.score*8), 0.03, 'sine', 0.05);
+        levelEl.textContent = String(level());
+
+        // little “level up” sound when entering a new level
+        if (state.score % 8 === 0) {
+          beep(660, 0.06, 'sine', 0.06);
+          beep(880, 0.06, 'sine', 0.05);
+        } else {
+          beep(520 + Math.min(280, state.score*6), 0.03, 'sine', 0.05);
+        }
       }
     }
 
-    // Recycle belts with progressive spacing and progressive gap/width
+    // Recycle belts (progressive spacing + new belts use current difficulty)
     const spacing = beltSpacing(W, H);
     let rightMost = -Infinity;
     for (const b of belts) rightMost = Math.max(rightMost, b.x);
 
     for (let i=0;i<belts.length;i++){
-      if (belts[i].x + belts[i].w < -60) {
+      if (belts[i].x + belts[i].w < -80) {
         belts[i] = makeBelt(rightMost + spacing);
         rightMost = belts[i].x;
       }
@@ -700,9 +715,7 @@
   function render(){
     clear();
     drawStars();
-
     for (const b of belts) drawBelt(b);
-
     drawPlanet();
     drawParticles();
 
@@ -715,27 +728,13 @@
     ctx.fillStyle = v;
     ctx.fillRect(0,0,W,H);
     ctx.restore();
-
-    // If not started yet, show a subtle prompt on the canvas too
-    if (!state.startedOnce) {
-      ctx.save();
-      ctx.globalAlpha = 0.85;
-      ctx.fillStyle = 'rgba(255,255,255,.88)';
-      ctx.font = `900 ${Math.max(18, Math.round(W*0.048))}px system-ui`;
-      ctx.textAlign = 'center';
-      ctx.fillText('Tap Start to launch', W*0.5, H*0.42);
-      ctx.globalAlpha = 0.70;
-      ctx.font = `800 ${Math.max(12, Math.round(W*0.028))}px system-ui`;
-      ctx.fillText('Easy first • Gradually harder', W*0.5, H*0.48);
-      ctx.restore();
-    }
   }
 
   // Boot
   resetWorld();
   overlay.style.display = 'flex';
   panelTitle.textContent = 'KAX Space Hop';
-  panelText.innerHTML = `Easy at the start, then gradually harder. Keep your <b>planet</b> safe through <b>asteroid belt gaps</b>.`;
+  panelText.innerHTML = `Easy at the start, then harder in steps. Guide your <b>planet</b> through <b>asteroid belt gaps</b>.`;
   btnStart.textContent = '🚀 Start';
   requestAnimationFrame(loop);
 })();

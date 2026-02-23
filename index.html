@@ -1,1 +1,744 @@
-<h1>hi</h1>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>KAX — Space Hop</title>
+  <style>
+    :root{
+      --bg1:#050611;
+      --bg2:#0b0f2a;
+      --panel: rgba(255,255,255,.08);
+      --text: rgba(255,255,255,.92);
+      --muted: rgba(255,255,255,.68);
+      --accent:#8a7dff;
+      --accent2:#48d7ff;
+    }
+    *{ box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+    html,body{
+      height:100%; margin:0;
+      background: radial-gradient(1200px 700px at 50% 20%, var(--bg2), var(--bg1));
+      color:var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .wrap{
+      min-height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+               max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+    }
+    .card{
+      width:min(920px, 100%);
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 18px;
+      padding: 14px;
+      box-shadow: 0 12px 50px rgba(0,0,0,.35);
+      position:relative;
+      overflow:hidden;
+    }
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom:10px;
+      flex-wrap: wrap;
+    }
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      font-weight:900;
+      letter-spacing:.6px;
+    }
+    .logo{
+      width:34px;height:34px;border-radius:12px;
+      background: radial-gradient(12px 12px at 30% 35%, rgba(255,255,255,.85), rgba(255,255,255,.08)),
+                  linear-gradient(135deg, var(--accent), var(--accent2));
+      box-shadow: 0 8px 24px rgba(72,215,255,.18);
+      border:1px solid rgba(255,255,255,.15);
+      flex: 0 0 auto;
+    }
+    .brand small{
+      display:block;
+      font-weight:650;
+      color:var(--muted);
+      letter-spacing:0;
+      margin-top:2px;
+    }
+    .hud{ display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
+    .pill{
+      background: var(--panel);
+      border:1px solid rgba(255,255,255,.12);
+      padding:8px 10px;
+      border-radius: 12px;
+      font-weight:800;
+      display:flex;
+      gap:6px;
+      align-items:baseline;
+      white-space:nowrap;
+      user-select:none;
+    }
+    .pill span{ color:var(--muted); font-weight:800; font-size:12px; }
+    .pill b{ font-size:14px; }
+
+    .game-shell{
+      width:100%;
+      border-radius: 16px;
+      overflow:hidden;
+      border:1px solid rgba(255,255,255,.10);
+      background:
+        radial-gradient(900px 600px at 50% 35%, rgba(72,215,255,.12), rgba(138,125,255,.06) 40%, rgba(0,0,0,.0) 70%),
+        radial-gradient(700px 500px at 30% 60%, rgba(255,110,154,.08), rgba(0,0,0,0) 65%),
+        linear-gradient(180deg, rgba(255,255,255,.02), rgba(0,0,0,.05));
+      aspect-ratio: 9 / 16;
+      max-height: min(78vh, 980px);
+    }
+    @media (min-width: 780px) {
+      .game-shell{ aspect-ratio: 16 / 10; max-height: min(70vh, 720px); }
+    }
+    canvas{ width:100%; height:100%; display:block; }
+
+    .overlay{
+      position:absolute;
+      inset:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:16px;
+      pointer-events:none;
+    }
+    .panel{
+      width:min(520px, 100%);
+      background: rgba(10,12,28,.72);
+      border:1px solid rgba(255,255,255,.14);
+      border-radius: 18px;
+      padding:16px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 18px 70px rgba(0,0,0,.55);
+      pointer-events:auto;
+    }
+    .panel h1{ margin:0 0 6px 0; font-size:20px; letter-spacing:.2px; }
+    .panel p{ margin:8px 0; color:var(--muted); line-height:1.45; font-size:13px; }
+    .grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
+    @media (max-width: 420px){ .grid{ grid-template-columns: 1fr; } }
+    .btn{
+      border:1px solid rgba(255,255,255,.14);
+      background: linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.06));
+      color:var(--text);
+      border-radius: 14px;
+      padding:12px 12px;
+      font-weight:900;
+      cursor:pointer;
+      user-select:none;
+      touch-action: manipulation;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+    }
+    .btn:active{ transform: translateY(1px); }
+    .btn.primary{
+      background: linear-gradient(135deg, rgba(138,125,255,.35), rgba(72,215,255,.25));
+      border-color: rgba(72,215,255,.35);
+      box-shadow: 0 10px 30px rgba(72,215,255,.10);
+    }
+    .hint{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      margin-top:10px;
+      font-size:12px;
+      color:var(--muted);
+    }
+    .kbd{
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.06);
+      padding:2px 6px;
+      border-radius: 8px;
+      font-weight:900;
+      color: rgba(255,255,255,.88);
+    }
+    .footer{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:8px;
+      margin-top:10px;
+      color:var(--muted);
+      font-size:12px;
+    }
+    .toggle{ display:flex; align-items:center; gap:8px; user-select:none; }
+    input[type="checkbox"]{ width:18px;height:18px; accent-color: var(--accent2); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <div class="topbar">
+        <div class="brand">
+          <div class="logo" aria-hidden="true"></div>
+          <div>
+            <div>KAX</div>
+            <small>Space Hop</small>
+          </div>
+        </div>
+        <div class="hud">
+          <div class="pill"><span>Score</span><b id="score">0</b></div>
+          <div class="pill"><span>Best</span><b id="best">0</b></div>
+          <div class="pill"><span>Level</span><b id="level">1</b></div>
+        </div>
+      </div>
+
+      <div class="game-shell" id="shell">
+        <canvas id="game"></canvas>
+      </div>
+
+      <div class="overlay" id="overlay">
+        <div class="panel">
+          <h1 id="panelTitle">KAX Space Hop</h1>
+          <p id="panelText">
+            Easy at the start, then harder in steps. Guide your <b>planet</b> through <b>asteroid belt gaps</b>.
+          </p>
+
+          <div class="grid">
+            <button class="btn primary" id="btnStart">🚀 Start</button>
+            <button class="btn" id="btnHow">❓ How to Play</button>
+          </div>
+
+          <div class="hint">
+            <span><span class="kbd">Tap</span>/<span class="kbd">Click</span> = Boost</span>
+            <span><span class="kbd">Space</span> = Boost</span>
+            <span><span class="kbd">R</span> = Restart</span>
+          </div>
+
+          <div class="footer">
+            <div class="toggle">
+              <input type="checkbox" id="soundToggle" checked />
+              <label for="soundToggle">Sound</label>
+            </div>
+            <div style="opacity:.9">v1.4 (bigger planet + step difficulty)</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  try {
+    if (window.Telegram?.WebApp) {
+      Telegram.WebApp.ready();
+      Telegram.WebApp.expand();
+      Telegram.WebApp.disableVerticalSwipes?.();
+    }
+  } catch (_) {}
+
+  const shell  = document.getElementById('shell');
+  const canvas = document.getElementById('game');
+  const ctx    = canvas.getContext('2d', { alpha: true });
+
+  const scoreEl = document.getElementById('score');
+  const bestEl  = document.getElementById('best');
+  const levelEl = document.getElementById('level');
+
+  const overlay     = document.getElementById('overlay');
+  const panelTitle  = document.getElementById('panelTitle');
+  const panelText   = document.getElementById('panelText');
+  const btnStart    = document.getElementById('btnStart');
+  const btnHow      = document.getElementById('btnHow');
+  const soundToggle = document.getElementById('soundToggle');
+
+  function resizeCanvas() {
+    const rect = shell.getBoundingClientRect();
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    const w = Math.max(1, Math.round(rect.width * dpr));
+    const h = Math.max(1, Math.round(rect.height * dpr));
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+    }
+  }
+  const ro = new ResizeObserver(resizeCanvas);
+  ro.observe(shell);
+  window.addEventListener('resize', resizeCanvas, { passive:true });
+  requestAnimationFrame(resizeCanvas);
+
+  // Tiny synth
+  let audioCtx = null;
+  function beep(freq=440, dur=0.05, type='sine', gain=0.05) {
+    if (!soundToggle.checked) return;
+    try {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const t0 = audioCtx.currentTime;
+      const o = audioCtx.createOscillator();
+      const g = audioCtx.createGain();
+      o.type = type; o.frequency.value = freq;
+      g.gain.value = gain;
+      o.connect(g); g.connect(audioCtx.destination);
+      o.start(t0); o.stop(t0 + dur);
+    } catch (_) {}
+  }
+
+  const rand = (a,b)=> a + Math.random()*(b-a);
+  const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+  const lerp  = (a,b,t)=>a+(b-a)*t;
+
+  const state = {
+    running:false,
+    gameOver:false,
+    startedOnce:false,
+    time:0,
+    score:0,
+    best: Number(localStorage.getItem('kax_best') || 0),
+  };
+  bestEl.textContent = state.best;
+
+  const player = {
+    x:0, y:0, r:18,
+    vy:0,
+    drag:0.995,
+    tilt:0
+  };
+
+  const belts = [];
+  const stars = [];
+  const particles = [];
+
+  // -------- Step-based difficulty --------
+  // Every 8 points => next level (1..)
+  function level(){
+    return 1 + Math.floor(state.score / 8);
+  }
+
+  // Smooth within each level (0..1), so changes aren't too sudden.
+  function levelProgress(){
+    return (state.score % 8) / 8;
+  }
+
+  // We mix step (level) + a tiny smooth progression inside the step.
+  function difficulty01(){
+    // level 1 => ~0.0 ... level 10 => ~1.0
+    const lv = level();
+    const base = clamp((lv - 1) / 10, 0, 1);
+    const intra = levelProgress() * 0.08; // small smoothness inside a step
+    return clamp(base + intra, 0, 1);
+  }
+
+  function currentGap(H){
+    const t = difficulty01();
+    const easyGap = H * 0.36;
+    const hardGap = H * 0.22;
+    return lerp(easyGap, hardGap, t);
+  }
+
+  function beltSpacing(W, H){
+    const t = difficulty01();
+    const easy = Math.max(W * 0.86, H * 0.50);
+    const hard = Math.max(W * 0.62, H * 0.40);
+    return lerp(easy, hard, t);
+  }
+
+  function beltSpeed(W){
+    const t = difficulty01();
+    const easy = Math.max(1.9, Math.min(3.2, W * 0.0035));
+    const hard = Math.max(3.0, Math.min(5.2, W * 0.0054));
+    return lerp(easy, hard, t);
+  }
+
+  function beltWidth(W){
+    const t = difficulty01();
+    const easy = Math.max(64, Math.min(92, Math.round(W * 0.18)));
+    const hard = Math.max(54, Math.min(84, Math.round(W * 0.15)));
+    return Math.round(lerp(easy, hard, t));
+  }
+
+  function gravity(){
+    const t = difficulty01();
+    return lerp(0.40, 0.56, t);
+  }
+
+  function boostImpulse(){
+    const t = difficulty01();
+    return lerp(-8.0, -8.8, t);
+  }
+  // --------------------------------------
+
+  function resetWorld(){
+    const W = canvas.width, H = canvas.height;
+
+    state.time = 0;
+    state.score = 0;
+    state.gameOver = false;
+    scoreEl.textContent = '0';
+    levelEl.textContent = '1';
+
+    belts.length = 0;
+    stars.length = 0;
+    particles.length = 0;
+
+    // ✅ Bigger planet
+    player.r = Math.max(18, Math.min(30, Math.round(W * 0.052))); // was ~0.040
+    player.x = W * 0.28;
+    player.y = H * 0.52;
+    player.vy = 0;
+    player.tilt = 0;
+
+    const starCount = Math.round((W*H) / 22000);
+    for (let i=0;i<starCount;i++){
+      stars.push({ x:Math.random()*W, y:Math.random()*H, r:rand(0.7,1.9), s:rand(0.12,0.6), a:rand(0.15,0.9) });
+    }
+
+    let x = W * 1.18;
+    const spacing = beltSpacing(W, H);
+    const count = 4;
+    for (let i=0;i<count;i++){
+      belts.push(makeBelt(x));
+      x += spacing;
+    }
+  }
+
+  function makeRocks(thickness) {
+    const count = Math.round(thickness * 0.40);
+    const arr = [];
+    for (let i=0;i<count;i++){
+      arr.push({ t:Math.random(), r:rand(2.5,6.5), o:rand(0.35,0.95), wobble:rand(0.8,2.5) });
+    }
+    return arr;
+  }
+
+  function makeBelt(x){
+    const W = canvas.width, H = canvas.height;
+    const gap = currentGap(H);
+    const center = rand(H*0.24, H*0.76);
+    const thickness = Math.max(34, Math.min(64, Math.round(W*0.12)));
+    return {
+      x,
+      w: beltWidth(W),
+      gapY: center,
+      gapH: gap,
+      rocks: makeRocks(thickness),
+      hue: rand(200, 320),
+      scored:false
+    };
+  }
+
+  function spawnSpark(x,y,n=10){
+    for (let i=0;i<n;i++){
+      particles.push({ x,y, vx:rand(-2.6,2.6), vy:rand(-2.6,2.6), life:rand(18,34), r:rand(1.0,2.3), a:rand(0.45,0.95) });
+    }
+  }
+  function updateParticles(){
+    for (let i=particles.length-1;i>=0;i--){
+      const p = particles[i];
+      p.x += p.vx; p.y += p.vy;
+      p.vx *= 0.98; p.vy *= 0.98;
+      p.life -= 1;
+      if (p.life <= 0) particles.splice(i,1);
+    }
+  }
+
+  function clear(){ ctx.clearRect(0,0,canvas.width,canvas.height); }
+
+  function drawStars(){
+    const W = canvas.width, H = canvas.height;
+    ctx.save();
+    for (const s of stars){
+      s.x -= s.s * (1 + state.score*0.002);
+      if (s.x < -5){ s.x = W + rand(5, 80); s.y = Math.random()*H; }
+      ctx.globalAlpha = s.a;
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      ctx.fillStyle = 'white';
+      ctx.fill();
+    }
+    ctx.restore();
+
+    ctx.save();
+    ctx.globalAlpha = 0.12;
+    const g1 = ctx.createRadialGradient(W*0.65,H*0.25, W*0.05, W*0.65,H*0.25, W*0.62);
+    g1.addColorStop(0, 'rgba(72,215,255,.35)');
+    g1.addColorStop(1, 'rgba(72,215,255,0)');
+    ctx.fillStyle = g1; ctx.fillRect(0,0,W,H);
+
+    const g2 = ctx.createRadialGradient(W*0.25,H*0.65, W*0.05, W*0.25,H*0.65, W*0.7);
+    g2.addColorStop(0, 'rgba(138,125,255,.30)');
+    g2.addColorStop(1, 'rgba(138,125,255,0)');
+    ctx.fillStyle = g2; ctx.fillRect(0,0,W,H);
+    ctx.restore();
+  }
+
+  function drawPlanet(){
+    const W = canvas.width;
+    const r = player.r;
+
+    const tilt = Math.max(-0.7, Math.min(0.7, player.vy * 0.04));
+    player.tilt = player.tilt * 0.86 + tilt * 0.14;
+
+    ctx.save();
+    ctx.translate(player.x, player.y);
+    ctx.rotate(player.tilt);
+
+    ctx.beginPath();
+    ctx.arc(0,0,r*1.9,0,Math.PI*2);
+    const glow = ctx.createRadialGradient(0,0, r*0.2, 0,0, r*1.9);
+    glow.addColorStop(0,'rgba(72,215,255,.22)');
+    glow.addColorStop(1,'rgba(72,215,255,0)');
+    ctx.fillStyle = glow; ctx.fill();
+
+    const grd = ctx.createRadialGradient(-r*0.25,-r*0.25, r*0.2, 0,0, r*1.1);
+    grd.addColorStop(0,'rgba(255,255,255,.95)');
+    grd.addColorStop(0.25, 'rgba(72,215,255,1)');
+    grd.addColorStop(1, 'rgba(138,125,255,1)');
+    ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2);
+    ctx.fillStyle = grd; ctx.fill();
+
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = 'rgba(0,0,0,.55)';
+    for (let i=0;i<4;i++){
+      const cx = rand(-r*0.45, r*0.45);
+      const cy = rand(-r*0.35, r*0.35);
+      const cr = rand(r*0.12, r*0.22);
+      ctx.beginPath(); ctx.arc(cx, cy, cr, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    ctx.strokeStyle = 'rgba(255,255,255,.55)';
+    ctx.lineWidth = Math.max(1.2, W*0.0022);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, r*1.6, r*0.65, 0.25, 0, Math.PI*2);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  function drawBelt(b){
+    const W = canvas.width, H = canvas.height;
+    const topEnd = b.gapY - b.gapH/2;
+    const botStart = b.gapY + b.gapH/2;
+
+    ctx.save();
+    ctx.globalAlpha = 0.18;
+    ctx.fillStyle = `hsla(${b.hue}, 90%, 70%, 0.40)`;
+    ctx.fillRect(b.x-2, 0, b.w+4, topEnd);
+    ctx.fillRect(b.x-2, botStart, b.w+4, H-botStart);
+    ctx.restore();
+
+    function drawRocks(y0,y1){
+      const height = Math.max(0, y1-y0);
+      if (height<=0) return;
+      ctx.save();
+      const base = ctx.createLinearGradient(b.x, y0, b.x+b.w, y0);
+      base.addColorStop(0,'rgba(255,255,255,.10)');
+      base.addColorStop(1,'rgba(0,0,0,.20)');
+      ctx.fillStyle = base;
+      ctx.fillRect(b.x, y0, b.w, height);
+
+      for (const rk of b.rocks){
+        const yy = y0 + rk.t * height;
+        const xx = b.x + (0.18 + 0.64*Math.sin((rk.t*7 + state.time*0.0012)*rk.wobble)*0.5 + 0.32) * b.w;
+        ctx.globalAlpha = rk.o;
+        ctx.beginPath();
+        ctx.arc(xx, yy, rk.r, 0, Math.PI*2);
+        ctx.fillStyle = 'rgba(220,230,255,.45)';
+        ctx.fill();
+      }
+      ctx.restore();
+      ctx.globalAlpha = 1;
+    }
+    drawRocks(0, topEnd);
+    drawRocks(botStart, H);
+
+    ctx.save();
+    ctx.globalAlpha = 0.45;
+    ctx.strokeStyle = 'rgba(255,255,255,.25)';
+    ctx.lineWidth = Math.max(1.0, W*0.0018);
+    ctx.setLineDash([Math.max(6, W*0.015), Math.max(6, W*0.015)]);
+    ctx.beginPath();
+    ctx.moveTo(b.x, topEnd);   ctx.lineTo(b.x+b.w, topEnd);
+    ctx.moveTo(b.x, botStart); ctx.lineTo(b.x+b.w, botStart);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawParticles(){
+    ctx.save();
+    for (const p of particles){
+      ctx.globalAlpha = p.a * Math.max(0, p.life/34);
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+      ctx.fillStyle = 'rgba(255,255,255,.9)';
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function circleRectCollide(cx, cy, r, rx, ry, rw, rh) {
+    const nx = Math.max(rx, Math.min(cx, rx+rw));
+    const ny = Math.max(ry, Math.min(cy, ry+rh));
+    const dx = cx - nx, dy = cy - ny;
+    return (dx*dx + dy*dy) <= r*r;
+  }
+
+  function checkCollisions(){
+    const H = canvas.height;
+    if (player.y - player.r < 0 || player.y + player.r > H) return true;
+
+    for (const b of belts){
+      const topEnd = b.gapY - b.gapH/2;
+      const botStart = b.gapY + b.gapH/2;
+      if (circleRectCollide(player.x, player.y, player.r, b.x, 0, b.w, topEnd)) return true;
+      if (circleRectCollide(player.x, player.y, player.r, b.x, botStart, b.w, H-botStart)) return true;
+    }
+    return false;
+  }
+
+  function boost(){
+    if (!state.running) return;
+    player.vy = boostImpulse();
+    spawnSpark(player.x - player.r*0.6, player.y, 7);
+    beep(720, 0.035, 'triangle', 0.05);
+  }
+
+  function startGame(){
+    state.running = true;
+    state.gameOver = false;
+    state.startedOnce = true;
+    overlay.style.display = 'none';
+    try { if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume(); } catch(_) {}
+    beep(520, 0.05, 'sine', 0.06);
+  }
+
+  function endGame(){
+    state.running = false;
+    state.gameOver = true;
+
+    if (state.score > state.best) {
+      state.best = state.score;
+      localStorage.setItem('kax_best', String(state.best));
+      bestEl.textContent = state.best;
+      beep(900, 0.07, 'sine', 0.06);
+      beep(1100,0.06, 'sine', 0.05);
+    } else {
+      beep(220, 0.09, 'sawtooth', 0.05);
+    }
+
+    overlay.style.display = 'flex';
+    panelTitle.textContent = 'Game Over';
+    panelText.innerHTML = `Your score: <b>${state.score}</b><br/>Press <b>Restart</b> or hit <span style="opacity:.9">R</span>.`;
+    btnStart.textContent = '🔁 Restart';
+  }
+
+  function showHow(){
+    overlay.style.display = 'flex';
+    panelTitle.textContent = 'How to Play';
+    panelText.innerHTML =
+      `• <b>Tap/Click</b> or press <b>Space</b> to boost your planet upward.<br/>` +
+      `• Slip through the <b>asteroid belt gaps</b>.<br/>` +
+      `• Each belt passed = <b>+1</b> score.<br/><br/>` +
+      `Difficulty increases in steps: every 8 points you level up.`;
+  }
+
+  // Input
+  canvas.addEventListener('pointerdown', (e)=>{ e.preventDefault(); if (state.startedOnce && !state.gameOver) boost(); }, {passive:false});
+  window.addEventListener('keydown', (e)=>{
+    const k = e.key.toLowerCase();
+    if (e.code === 'Space') { e.preventDefault(); if (state.running) boost(); }
+    if (k === 'r') { if (state.startedOnce) { resetWorld(); startGame(); } }
+  });
+
+  btnStart.addEventListener('click', ()=>{ resetWorld(); startGame(); });
+  btnHow.addEventListener('click', showHow);
+
+  // Loop
+  let last = performance.now();
+  function loop(now){
+    const dt = Math.min(34, now - last);
+    last = now;
+    if (state.running) tick(dt);
+    render();
+    requestAnimationFrame(loop);
+  }
+
+  function tick(dt){
+    state.time += dt;
+    const W = canvas.width, H = canvas.height;
+
+    // Physics (progressive)
+    player.vy += gravity() * (dt/16.67);
+    player.vy *= player.drag;
+    player.y += player.vy * (dt/16.67);
+
+    // Move belts (progressive speed)
+    const speed = beltSpeed(W);
+    for (const b of belts){
+      b.x -= speed * (dt/16.67);
+
+      if (!b.scored && b.x + b.w < player.x) {
+        b.scored = true;
+        state.score += 1;
+        scoreEl.textContent = state.score;
+        levelEl.textContent = String(level());
+
+        // little “level up” sound when entering a new level
+        if (state.score % 8 === 0) {
+          beep(660, 0.06, 'sine', 0.06);
+          beep(880, 0.06, 'sine', 0.05);
+        } else {
+          beep(520 + Math.min(280, state.score*6), 0.03, 'sine', 0.05);
+        }
+      }
+    }
+
+    // Recycle belts (progressive spacing + new belts use current difficulty)
+    const spacing = beltSpacing(W, H);
+    let rightMost = -Infinity;
+    for (const b of belts) rightMost = Math.max(rightMost, b.x);
+
+    for (let i=0;i<belts.length;i++){
+      if (belts[i].x + belts[i].w < -80) {
+        belts[i] = makeBelt(rightMost + spacing);
+        rightMost = belts[i].x;
+      }
+    }
+
+    updateParticles();
+
+    if (checkCollisions()) {
+      spawnSpark(player.x, player.y, 18);
+      endGame();
+    }
+  }
+
+  function render(){
+    clear();
+    drawStars();
+    for (const b of belts) drawBelt(b);
+    drawPlanet();
+    drawParticles();
+
+    // vignette
+    const W = canvas.width, H = canvas.height;
+    ctx.save();
+    const v = ctx.createRadialGradient(W*0.5,H*0.5, Math.min(W,H)*0.2, W*0.5,H*0.5, Math.max(W,H)*0.75);
+    v.addColorStop(0, 'rgba(0,0,0,0)');
+    v.addColorStop(1, 'rgba(0,0,0,.35)');
+    ctx.fillStyle = v;
+    ctx.fillRect(0,0,W,H);
+    ctx.restore();
+  }
+
+  // Boot
+  resetWorld();
+  overlay.style.display = 'flex';
+  panelTitle.textContent = 'KAX Space Hop';
+  panelText.innerHTML = `Easy at the start, then harder in steps. Guide your <b>planet</b> through <b>asteroid belt gaps</b>.`;
+  btnStart.textContent = '🚀 Start';
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
+
